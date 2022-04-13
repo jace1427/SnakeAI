@@ -1,16 +1,24 @@
-import numpy as np
+import random
+import pygame
+
+
+white = pygame.Color(255, 255, 255)
 
 
 class Food():
+    def __init__(self, win_x, win_y):
+        self.win_x = win_x
+        self.win_y = win_y
+        self.pos = [random.randrange(1, (self.win_x // 10)) * 10,
+                    random.randrange(1, (self.win_y // 10)) * 10]
+        self.spawn = True
 
-    def __init__(self):
-        self.pos = np.zeros([400 + np.random.rand(0, 40) * 10, np.random.rand(0, 40) * 10])
+    def __getitem__(self, key):
+        return self.pos[key]
 
-    def show(self):
-        fill(255, 0, 0)
-        rect(self.pos[0], self.pos[1], 10, 10)
+    def new(self):
+        self.pos = [random.randrange(1, (self.win_x // 10)) * 10,
+                    random.randrange(1, (self.win_y // 10)) * 10]
 
-    def clone(self):
-        clone = Food()
-        clone.pos = self.pos.copy()
-        return clone
+    def draw(self, game_window):
+        pygame.draw.rect(game_window, white, pygame.Rect(self.pos[0], self.pos[1], 10, 10))

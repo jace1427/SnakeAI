@@ -1,15 +1,21 @@
 import numpy as np
 from NN import NeuralNet
 from food import Food
+import pygame
+
+black = pygame.Color(0, 0, 0)
+white = pygame.Color(255, 255, 255)
+red = pygame.Color(255, 0, 0)
+green = pygame.Color(0, 255, 0)
+blue = pygame.Color(0, 0, 255)
 
 
 class Snake():
-    def __init__(self):
+    def __init__(self, game_window, win_x, win_y):
         self.length = 4
-        self.pos = np.array([100, 50])
-        self.tailpos = np.array([[90, 50], [80, 50], [70, 50]])
+        self.pos = np.array([250, 250])
+        self.tailpos = np.array([[250, 250], [240, 250], [230, 250]])
         self.vel = np.array([10, 0])  # x, y
-        self.food = Food()
         self.brain = NeuralNet(24, 18, 4)
         self.vision = np.zeros(24)
         self.decision = np.zeros(4)
@@ -19,6 +25,8 @@ class Snake():
         self.growCount = 0
         self.alive = True
         self.test = False
+        self.food = Food(win_x, win_y)
+        self.game_window = game_window
 
     def mutate(self, mr):
         self.brain.mutate(mr)
@@ -77,12 +85,9 @@ class Snake():
             self.growCount += 1
 
     def show(self):
-        fill(255)
-        stroke(0)
-        for i in self.tailpos:
-            rect(i[0], i[1])
-        rect(self.pos[0], self.pos[1])
-        food.show()
+        for pos in self.tailpos:
+            pygame.draw.rect(self.game_window, green, pygame.Rect(pos[0], pos[1], 10, 10))
+        self.food.draw(self.game_window)
 
     def grow(self):
         temp = self.pos.copy()
@@ -113,9 +118,52 @@ class Snake():
         child.brain = self.brain.crossover(partner.brain)
         return child
 
-    def saveSnake(snakeNo, score, popID):
-        pass
+    def clone(self):
+        clone = Snake()
+        clone.brain = self.brain.clone()
+        clone.alive = True
+        return clone
 
-if __name__ == '__main__':
-    s = Snake()
-    s.move()
+    def saveSnake(self, snakeNo, score, popID):
+        snakeStats = f"Top Score,PopulationID\n{score},{popID}"
+        save(snakeStats, "data/SnakeStats" + snakeNo + ".csv")
+        save(self.brain.NetToTable, "data/SnakeStats" + snakeNo + ".csv")
+
+    def loadSnake(self, snakeNo):
+        load = Snake()
+        t = loadTable("data/Snake" + snakeNo + ".csv")
+        load.brain.TableToNet(t)
+        return load
+
+    def look(self):
+        vision = []
+        dirs = [[-10, 0], [-10, -10], [0, -10], [10, -10],
+                [10, 0], [10, 10], [0, 10], [-10, 10]]
+        for i in range(8):
+            temp = lookInDirection(dirs[i])
+            vision[i] = temp[0]
+            vision[i + 1] = temp[1]
+            vision[i + 2] = temp[2]
+
+    def lookInDirection(self, direction):
+        visionInDirection = []
+        foodIsFound = False
+        tailIsFound = False
+        pos = self.pos
+        distance = 0
+        pos.add(direction)
+        distance += 1
+
+        while (not (position.x < 400 or position.y < 0 or position.x >= 800 or position.y >= 400)):
+            if (not foodIsFound and pos[0] == food.pos[0] and position[1] == food.pos[1]):
+                visionInDirection[0] = 1
+                foodIsFound = True
+            if (not tailIsFound and isOnTail(pos[0], pos[1])):
+                visionInDirection[1] = 1 / distance
+                tailIsFound = True
+            position.add(direction)
+            distance += 1
+
+        visionInDirection[2] = 1 / distance
+
+        return visionInDirection
