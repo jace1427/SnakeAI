@@ -1,20 +1,12 @@
 import numpy as np
 from NN import NeuralNet
-from food import Food
-import pygame
-
-black = pygame.Color(0, 0, 0)
-white = pygame.Color(255, 255, 255)
-red = pygame.Color(255, 0, 0)
-green = pygame.Color(0, 255, 0)
-blue = pygame.Color(0, 0, 255)
 
 
 class Snake():
-    def __init__(self, game_window, win_x, win_y):
+    def __init__(self):
         self.length = 4
         self.pos = np.array([250, 250])
-        self.tailpos = np.array([[250, 250], [240, 250], [230, 250]])
+        self.tailpos = np.array([[250, 250]])
         self.vel = np.array([10, 0])  # x, y
         self.brain = NeuralNet(24, 18, 4)
         self.vision = np.zeros(24)
@@ -24,9 +16,7 @@ class Snake():
         self.leftTolive = 200
         self.growCount = 0
         self.alive = True
-        self.test = False
-        self.food = Food(win_x, win_y)
-        self.game_window = game_window
+        self.test = True
 
     def mutate(self, mr):
         self.brain.mutate(mr)
@@ -48,9 +38,14 @@ class Snake():
             self.vel[0] = 0
             self.vel[1] = 10
 
-    def move(self):
+    def move(self, foodPos):
+        self.mutate(0.01)
+        self.look(foodPos)
+        self.setVelocity()
+        print(self.pos, self.vel)
         self.lifetime += 1
         self.leftTolive -= 1
+        eat = False
 
         if self.leftTolive < 0:
             self.alive = False
@@ -58,8 +53,13 @@ class Snake():
         if self.goingToDie(self.pos[0] + self.vel[0], self.pos[1] + self.vel[1]):
             self.alive = False
 
-        if self.pos[0] + self.vel[0] == self.food.pos[0] and self.pos[1] + self.vel[1] == self.food.pos[1]:
-            self.eat()
+        if self.pos[0] + self.vel[0] == foodPos[0] and self.pos[1] + self.vel[1] == foodPos[1]:
+            eat = True
+            self.leftTolive += 100
+            if self.test:
+                self.growCount += 4
+            else:
+                self.growCount += 1
 
         if self.growCount > 0:
             self.growCount -= 1
@@ -70,31 +70,14 @@ class Snake():
             self.tailpos[self.tailpos.shape[0] - 2] = [self.pos[0], self.pos[1]]
 
         self.pos = np.add(self.pos, self.vel)
-
-    def eat(self):
-        food = Food()
-
-        while [food.pos[0], food.pos[1]] in self.tailpos:
-            food = Food()
-
-        self.leftTolive += 100
-
-        if self.test:
-            self.growCount += 4
-        else:
-            self.growCount += 1
-
-    def show(self):
-        for pos in self.tailpos:
-            pygame.draw.rect(self.game_window, green, pygame.Rect(pos[0], pos[1], 10, 10))
-        self.food.draw(self.game_window)
+        return eat
 
     def grow(self):
         temp = self.pos.copy()
         self.tailpos.append(temp)
 
     def goingToDie(self, x, y):
-        if (x < 400 or y < 0 or x >= 800 or y >= 400):
+        if (x < 0 or y < 0 or x >= 500 or y >= 500):
             return True
 
         return self.isOnTail(x, y)
@@ -104,6 +87,40 @@ class Snake():
             if x == i[0] and y == i[1]:
                 return True
         return False
+
+    def look(self, foodPos):
+        vision = []
+        dirs = [[-10, 0], [-10, -10], [0, -10], [10, -10],
+                [10, 0], [10, 10], [0, 10], [-10, 10]]
+        for i in range(8):
+            temp = self.lookInDirection(dirs[i], foodPos)
+            vision.append(temp[0])
+            vision.append(temp[1])
+            vision.append(temp[2])
+        self.vision = vision
+
+    def lookInDirection(self, direction, foodPos):
+        visionInDirection = [0, 0, 0]
+        foodIsFound = False
+        tailIsFound = False
+        pos = self.pos.copy()
+        distance = 0
+        pos += direction
+        distance += 1
+
+        while not (pos[0] < 0 or pos[1] < 0 or pos[0] >= 500 or pos[1] >= 500):
+            if not (foodIsFound and pos[0] == foodPos[0] and pos[1] == foodPos[1]):
+                visionInDirection[0] = 1
+                foodIsFound = True
+            if not (tailIsFound and self.isOnTail(pos[0], pos[1])):
+                visionInDirection[1] = 1 / distance
+                tailIsFound = True
+            pos += direction
+            distance += 1
+
+        visionInDirection[2] = 1 / distance
+
+        return visionInDirection
 
     def calcFitness(self):
         if (self.length < 10):
@@ -134,36 +151,3 @@ class Snake():
         t = loadTable("data/Snake" + snakeNo + ".csv")
         load.brain.TableToNet(t)
         return load
-
-    def look(self):
-        vision = []
-        dirs = [[-10, 0], [-10, -10], [0, -10], [10, -10],
-                [10, 0], [10, 10], [0, 10], [-10, 10]]
-        for i in range(8):
-            temp = lookInDirection(dirs[i])
-            vision[i] = temp[0]
-            vision[i + 1] = temp[1]
-            vision[i + 2] = temp[2]
-
-    def lookInDirection(self, direction):
-        visionInDirection = []
-        foodIsFound = False
-        tailIsFound = False
-        pos = self.pos
-        distance = 0
-        pos.add(direction)
-        distance += 1
-
-        while (not (position.x < 400 or position.y < 0 or position.x >= 800 or position.y >= 400)):
-            if (not foodIsFound and pos[0] == food.pos[0] and position[1] == food.pos[1]):
-                visionInDirection[0] = 1
-                foodIsFound = True
-            if (not tailIsFound and isOnTail(pos[0], pos[1])):
-                visionInDirection[1] = 1 / distance
-                tailIsFound = True
-            position.add(direction)
-            distance += 1
-
-        visionInDirection[2] = 1 / distance
-
-        return visionInDirection

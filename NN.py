@@ -38,6 +38,7 @@ class NeuralNet:
         outputInputs = self.woh.dot(hiddenOutputsBias2.m)
         outputs = outputInputs.activate()
 
+        print(outputs)
         return outputs.toArray()
 
     def crossover(self, partner):
